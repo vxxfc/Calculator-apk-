@@ -1,0 +1,34 @@
+# This is a sample Buildozer spec YAML file for converting Python code to an APK.
+# Save this file as buildozer.spec.yaml and adjust the values as needed.
+
+buildozer:
+  app_name: "MyPythonApp"           # Name of your app
+  package_name: "org.vxxfc.mypythonapp"  # Unique package name (use reverse domain style)
+  version: "1.0.0"                  # App version
+  requirements:                     # List of Python dependencies (comma-separated)
+    - kivy
+    - requests
+  source_dir: "."                   # Directory containing your main.py
+  entry_point: "main.py"            # Main Python file (entry point)
+  icon: "icon.png"                  # App icon (optional)
+  orientation: "portrait"           # Screen orientation: portrait/landscape/all
+  presplash: "presplash.png"        # Presplash image (optional)
+  android:
+    sdk_version: "34"               # Target Android SDK version
+    min_sdk_version: "21"           # Minimum Android SDK version
+    permissions:                    # Android permissions to request
+      - INTERNET
+    archs:                          # Supported architectures
+      - armeabi-v7a
+      - arm64-v8a
+  log_level: "2"                    # Buildozer log level (0=none, 2=normal, 3=debug)
+  debug: false                      # Set true for debug build
+  hide_statusbar: false             # Hide Android status bar (optional)
+  fullscreen: false                 # Fullscreen mode (optional)
+  extra_args: ""                    # Extra args to pass to buildozer (optional)
+
+# To build your APK:
+#   1. Install buildozer: pip install buildozer
+#   2. Run: buildozer -v android debug
+
+# For more options, see Buildozer documentation: https://buildozer.readthedocs.io/
