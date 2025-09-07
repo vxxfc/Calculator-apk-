@@ -1,4 +1,4 @@
-name: Build APK (Buildozer Docker)
+name: Build APK (Buildozer GHCR)
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
-      DOCKER_BUILDKIT: "0"   # disable BuildKit (fixes docker pull issue)
+      DOCKER_BUILDKIT: "0"   # explicitly disable BuildKit everywhere
 
     steps:
       - name: Checkout repository
@@ -24,19 +24,21 @@ jobs:
           fi
           echo "✅ buildozer.spec found"
 
-      - name: Pull kivy/buildozer Docker image
-        run: docker pull kivy/buildozer:2024-04-03
+      - name: Pull kivy/buildozer Docker image (from GitHub Container Registry)
+        run: |
+          DOCKER_BUILDKIT=0 docker pull ghcr.io/kivy/buildozer:latest
 
       - name: Build APK inside Docker
         run: |
           mkdir -p $HOME/.buildozer
-          docker run --rm \
+          DOCKER_BUILDKIT=0 docker run --rm \
             -v "${{ github.workspace }}":/home/user/hostcwd \
             -v "$HOME/.buildozer":/home/user/.buildozer \
             -w /home/user/hostcwd \
-            kivy/buildozer:2024-04-03 \
+            ghcr.io/kivy/buildozer:latest \
             buildozer -v android debug
 
+          # fix ownership so artifacts can be uploaded
           sudo chown -R $(id -u):$(id -g) bin || true
 
       - name: List build outputs
