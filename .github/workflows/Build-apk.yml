@@ -23,7 +23,7 @@ jobs:
             build-essential ccache libncurses5 \
             libstdc++6 libffi-dev libssl-dev \
             libsqlite3-dev libjpeg-dev zlib1g-dev libpng-dev
-
+            apt install libncurses5
       - name: Install Buildozer + dependencies
         run: |
           pip install --upgrade pip
