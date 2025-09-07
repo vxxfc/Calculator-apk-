@@ -1,0 +1,49 @@
+name: Build APK (Buildozer Docker)
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      DOCKER_BUILDKIT: "0"   # disable BuildKit (fixes docker pull issue)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify buildozer.spec exists
+        run: |
+          if [ ! -f buildozer.spec ]; then
+            echo "❌ buildozer.spec missing in repo root!"
+            exit 1
+          fi
+          echo "✅ buildozer.spec found"
+
+      - name: Pull kivy/buildozer Docker image
+        run: docker pull kivy/buildozer:2024-04-03
+
+      - name: Build APK inside Docker
+        run: |
+          mkdir -p $HOME/.buildozer
+          docker run --rm \
+            -v "${{ github.workspace }}":/home/user/hostcwd \
+            -v "$HOME/.buildozer":/home/user/.buildozer \
+            -w /home/user/hostcwd \
+            kivy/buildozer:2024-04-03 \
+            buildozer -v android debug
+
+          sudo chown -R $(id -u):$(id -g) bin || true
+
+      - name: List build outputs
+        run: ls -la bin || true
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: calculator-apk
+          path: bin/*.apk
