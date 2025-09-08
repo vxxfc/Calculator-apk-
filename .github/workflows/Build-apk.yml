@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
@@ -22,9 +22,9 @@ jobs:
             git zip unzip openjdk-17-jdk \
             build-essential ccache libncurses5-dev \
             libstdc++6 libffi-dev libssl-dev \
-            libsqlite3-dev libjpeg-dev zlib1g-dev libpng-dev
+            libsqlite3-dev libjpeg-dev zlib1g-dev libpng-dev wget
 
-      - name: Install Buildozer + dependencies
+      - name: Install Buildozer + Python deps
         run: |
           pip install --upgrade pip
           pip install Cython==0.29.36
@@ -38,7 +38,19 @@ jobs:
           fi
           echo "✅ buildozer.spec found"
 
+      - name: Install Android SDK & Build Tools
+        run: |
+          sudo mkdir -p /usr/lib/android-sdk/cmdline-tools
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          sudo unzip -q cmdline-tools.zip -d /usr/lib/android-sdk/cmdline-tools
+          sudo mv /usr/lib/android-sdk/cmdline-tools/cmdline-tools /usr/lib/android-sdk/cmdline-tools/latest
+          yes | sudo /usr/lib/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/lib/android-sdk \
+            "platform-tools" "platforms;android-31" "build-tools;33.0.2" "ndk;21.4.7075529"
+
       - name: Build APK
+        env:
+          ANDROIDSDK: /usr/lib/android-sdk
+          ANDROIDNDK: /usr/lib/android-sdk/ndk/21.4.7075529
         run: |
           buildozer -v android debug
 
