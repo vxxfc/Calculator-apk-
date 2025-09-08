@@ -14,15 +14,10 @@ source.dir = .
 # (str) Main Python file
 source.main = main.py
 
-# (str) Versioning
+# (str) Application version
 version = 0.1
 
-# (str) Application versioning (method 1)
-version.regex = __version__ = ['"](.*)['"]
-version.filename = %(source.dir)s/main.py
-
 # (list) Application requirements
-# You can add more (e.g. "numpy, kivy[base]")
 requirements = python3,kivy
 
 # (str) Supported orientations: landscape, portrait or all
@@ -31,10 +26,10 @@ orientation = portrait
 # (bool) Indicate if the application should be fullscreen
 fullscreen = 0
 
-# (list) Permissions (if needed, else keep empty)
+# (list) Permissions (if needed)
 android.permissions = INTERNET
 
-# ✅ Force Buildozer to use the preinstalled SDK/NDK (matches workflow)
+# ✅ Use preinstalled SDK/NDK from workflow
 android.sdk_path = /usr/lib/android-sdk
 android.ndk_path = /usr/lib/android-sdk/ndk/21.4.7075529
 
@@ -47,22 +42,13 @@ android.api = 31
 # (int) Build-tools version (must match workflow)
 android.build_tools = 33.0.2
 
-# (bool) Copy library instead of making a libpymodules.so
-# Use this if you hit issues with loading modules
-# android.copy_libs = 1
-
-# (list) Presplash and icon images (optional)
-# icon.filename = %(source.dir)s/icon.png
-# presplash.filename = %(source.dir)s/presplash.png
-
 # (str) Supported architectures
-# You can add arm64-v8a, x86 if needed
 android.archs = armeabi-v7a
 
 # (str) Entry point
 entrypoint = main.py
 
-# (str) Python for android branch to use
+# (str) Python-for-android branch
 p4a.branch = master
 
 [buildozer]
