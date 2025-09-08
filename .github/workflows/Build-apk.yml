@@ -20,8 +20,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install system dependencies
+        
+      - name- name: Install tar
+  run: sudo apt-get update && sudo apt-get install -y tar Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
