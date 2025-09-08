@@ -1,133 +1,27 @@
-name: Build APK (No Docker, sdkmanager + AIDL fixed)
+name: Android CI
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
-    env:
-      # global defaults for subsequent steps (can be overridden per-step)
-      ANDROID_HOME: /usr/lib/android-sdk
-      ANDROID_SDK_ROOT: /usr/lib/android-sdk
-      ANDROIDSDK: /usr/lib/android-sdk
-      ANDROIDNDK: /usr/lib/android-sdk/ndk/21.4.7075529
-      PATH: /usr/lib/android-sdk/build-tools/33.0.2:/usr/lib/android-sdk/platform-tools:/usr/lib/android-sdk/tools/bin:/usr/lib/android-sdk/cmdline-tools/latest/bin:$PATH
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v2
 
-      - name: Install tar
-        run: sudo apt-get update && sudo apt-get install -y tar
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            python3-pip python3-setuptools python3-wheel \
-            git zip unzip openjdk-17-jdk \
-            build-essential ccache libncurses5-dev \
-            libstdc++6 libffi-dev libssl-dev \
-            libsqlite3-dev libjpeg-dev zlib1g-dev libpng-dev wget
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install buildozer[full]
 
-      - name: Install Buildozer & Python deps
-        run: |
-          pip install --upgrade pip
-          pip install Cython==0.29.36
-          pip install buildozer
-
-      - name: Verify buildozer.spec exists
-        run: |
-          if [ ! -f buildozer.spec ]; then
-            echo "❌ buildozer.spec missing in repo root!"
-            ls -la
-            exit 1
-          fi
-          echo "✅ buildozer.spec found"
-
-      - name: Install Android commandline tools, build-tools, NDK & ensure sdkmanager + aidl available
-        env:
-          ANDROID_HOME: /usr/lib/android-sdk
-          ANDROID_SDK_ROOT: /usr/lib/android-sdk
-        run: |
-          set -eux
-
-          sudo mkdir -p /usr/lib/android-sdk
-          sudo mkdir -p /usr/lib/android-sdk/cmdline-tools
-
-          # download and extract commandline tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-          sudo unzip -q -o cmdline-tools.zip -d /usr/lib/android-sdk/cmdline-tools
-
-          # move to 'latest' (handle different zip content layouts)
-          if [ -d /usr/lib/android-sdk/cmdline-tools/cmdline-tools ]; then
-            sudo rm -rf /usr/lib/android-sdk/cmdline-tools/latest || true
-            sudo mv -f /usr/lib/android-sdk/cmdline-tools/cmdline-tools /usr/lib/android-sdk/cmdline-tools/latest
-          else
-            sudo rm -rf /usr/lib/android-sdk/cmdline-tools/latest || true
-            sudo mv -f /usr/lib/android-sdk/cmdline-tools/* /usr/lib/android-sdk/cmdline-tools/latest || true
-          fi
-
-          # create legacy tools/bin path expected by some tools (Buildozer)
-          sudo mkdir -p /usr/lib/android-sdk/tools/bin
-
-          # ensure sdkmanager exists in new location
-          if [ ! -x /usr/lib/android-sdk/cmdline-tools/latest/bin/sdkmanager ]; then
-            echo "ERROR: sdkmanager not found at /usr/lib/android-sdk/cmdline-tools/latest/bin/sdkmanager"
-            ls -la /usr/lib/android-sdk/cmdline-tools || true
-            exit 1
-          fi
-
-          # symlink sdkmanager to legacy path so Buildozer and scripts find it
-          sudo ln -sf /usr/lib/android-sdk/cmdline-tools/latest/bin/sdkmanager /usr/lib/android-sdk/tools/bin/sdkmanager
-          sudo chmod +x /usr/lib/android-sdk/tools/bin/sdkmanager
-
-          # update PATH for this shell so sdkmanager is usable now
-          export PATH=/usr/lib/android-sdk/cmdline-tools/latest/bin:/usr/lib/android-sdk/tools/bin:/usr/lib/android-sdk/platform-tools:$PATH
-
-          # accept licenses and install necessary components (platform-tools, platforms, build-tools, ndk)
-          yes | sudo /usr/lib/android-sdk/tools/bin/sdkmanager --sdk_root=/usr/lib/android-sdk --licenses || true
-          yes | sudo /usr/lib/android-sdk/tools/bin/sdkmanager --sdk_root=/usr/lib/android-sdk \
-            "platform-tools" "platforms;android-31" "build-tools;33.0.2" "ndk;21.4.7075529"
-
-          # symlink aidl from build-tools into /usr/local/bin so it's on PATH
-          if [ -f /usr/lib/android-sdk/build-tools/33.0.2/aidl ]; then
-            sudo ln -sf /usr/lib/android-sdk/build-tools/33.0.2/aidl /usr/local/bin/aidl
-            sudo chmod +x /usr/local/bin/aidl
-          fi
-
-          # diagnostics
-          echo "sdkmanager location: $(command -v /usr/lib/android-sdk/tools/bin/sdkmanager || true)"
-          /usr/lib/android-sdk/tools/bin/sdkmanager --version || true
-          echo "aidl location: $(which aidl || true)"
-          aidl --version || true
-          echo "List build-tools folder:"
-          ls -la /usr/lib/android-sdk/build-tools || true
-
-      - name: Build APK (use preinstalled SDK/NDK)
-        env:
-          ANDROIDSDK: /usr/lib/android-sdk
-          ANDROIDNDK: /usr/lib/android-sdk/ndk/21.4.7075529
-          ANDROID_HOME: /usr/lib/android-sdk
-          ANDROID_SDK_ROOT: /usr/lib/android-sdk
-          PATH: /usr/lib/android-sdk/build-tools/33.0.2:/usr/lib/android-sdk/platform-tools:/usr/lib/android-sdk/tools/bin:/usr/lib/android-sdk/cmdline-tools/latest/bin:$PATH
-        run: |
-          echo "Using SDK: $ANDROIDSDK"
-          echo "Using NDK: $ANDROIDNDK"
-          echo "aidl: $(which aidl || echo 'aidl not found')"
-          aidl --version || true
-          # run the build
-          buildozer -v android debug
-
-      - name: List build outputs
-        run: ls -la bin || true
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: calculator-apk
-          path: bin/*.apk
+    - name: Build Android APK
+      run: |
+        buildozer android debug
