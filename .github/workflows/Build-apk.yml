@@ -1,4 +1,4 @@
-name: Build APK (No Docker, sdkmanager + AIDL fixed)
+name: Build APK
 
 on:
   push:
@@ -17,25 +17,16 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11' # Use a version compatible with Buildozer
+          python-version: '3.11' 
 
       - name: Install Buildozer & Python dependencies
         run: |
           pip install --upgrade pip
           pip install Cython==0.29.36 buildozer
 
-      - name: Verify buildozer.spec exists
-        run: |
-          if [ ! -f buildozer.spec ]; then
-            echo "❌ buildozer.spec missing in repo root!"
-            ls -la
-            exit 1
-          fi
-          echo "✅ buildozer.spec found"
-
       - name: Build APK
         run: |
-          buildozer -v android debug
+          buildozer android debug
       
       - name: List build outputs
         run: ls -la bin || true
