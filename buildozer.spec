@@ -3,7 +3,7 @@ title = Calculator
 package.name = calculator
 package.domain = org.example
 
-# VERSION MUST BE SPECIFIED CORRECTLY
+# MUST HAVE EITHER version OR version.regex
 version = 1.0.0
 
 source.dir = .
