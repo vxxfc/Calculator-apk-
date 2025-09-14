@@ -8,75 +8,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Use pre-configured Buildozer action
+        uses: ArtemSBulgakov/buildozer-action@v1.3.0
         with:
-          python-version: '3.11'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            libstdc++6 \
-            aidl \
-            git \
-            zip \
-            unzip \
-            openjdk-17-jdk \
-            autoconf \
-            libtool \
-            pkg-config \
-            zlib1g-dev \
-            libncurses5-dev \
-            cmake \
-            libffi-dev \
-            libssl-dev \
-            python3-pip \
-            curl \
-            wget \
-            unzip
-
-      - name: Install Buildozer and dependencies
-        run: |
-          pip install --upgrade pip
-          pip install Cython==0.29.36 buildozer
-
-      - name: Initialize Buildozer if needed
-        run: |
-          if [ ! -f "buildozer.spec" ]; then
-            buildozer init
-            # Set appropriate Android versions
-            sed -i 's/android.api = .*/android.api = 34/' buildozer.spec
-            sed -i 's/android.minapi = .*/android.minapi = 24/' buildozer.spec
-            sed -i 's/android.ndk = .*/android.ndk = 23b/' buildozer.spec
-          fi
-
-      - name: Build APK
-        run: |
-          # First run update to initialize the environment
-          buildozer android update || echo "Update completed or failed, continuing with build..."
-          
-          # Then build the APK
-          buildozer -v android debug
+          buildozer_version: stable
+          target: android debug
+          buildozer_init: true
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: calculator-apk
           path: bin/*.apk
-
-      - name: Upload build logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-logs
-          path: |
-            .buildozer/
-            buildozer.spec
