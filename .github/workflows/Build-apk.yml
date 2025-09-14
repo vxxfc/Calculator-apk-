@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
@@ -19,34 +19,40 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install system dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            git \
-            zip \
-            unzip \
-            openjdk-11-jdk \
-            autoconf \
-            libtool \
-            pkg-config \
-            zlib1g-dev \
-            libncurses5-dev \
-            cmake \
-            libffi-dev \
-            libssl-dev
+            git zip unzip openjdk-17-jdk \
+            autoconf libtool pkg-config \
+            zlib1g-dev libncurses5-dev \
+            cmake libffi-dev libssl-dev
 
-      - name: Install Buildozer and dependencies
+      - name: Install Buildozer
         run: |
-          pip install --upgrade pip
           pip install Cython==0.29.36 buildozer
 
-      - name: Build APK (let Buildozer handle Android SDK)
+      - name: Initialize Buildozer
         run: |
-          buildozer android clean
+          if [ ! -f "buildozer.spec" ]; then
+            buildozer init
+          fi
+
+      - name: Manual python-for-android setup
+        run: |
+          # Clone python-for-android manually
+          if [ ! -d ".buildozer/android/platform/python-for-android" ]; then
+            git clone https://github.com/kivy/python-for-android.git .buildozer/android/platform/python-for-android
+            cd .buildozer/android/platform/python-for-android
+            git checkout master
+            cd ../../../..
+          fi
+
+      - name: Build APK
+        run: |
           buildozer -v android debug
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: calculator-apk
