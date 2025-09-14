@@ -47,7 +47,7 @@ android.api = 31
 android.build_tools = 33.0.2
 
 # (str) SDK/NDK paths - FORCE Buildozer to use preinstalled SDK/NDK from CI
-android.sdk_path = /usr/lib/android-sdk
+android.sdk_path = /home/yourusername/.buildozer/android/platform/android-sdk
 android.ndk_path = /usr/lib/android-sdk/ndk/21.4.7075529
 
 # (list) Supported architectures
