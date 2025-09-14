@@ -46,10 +46,6 @@ android.api = 31
 # (str) Build-tools version used by Buildozer/p4a (must match CI)
 android.build_tools = 33.0.2
 
-# (str) SDK/NDK paths - FORCE Buildozer to use preinstalled SDK/NDK from CI
-android.sdk_path = /home/yourusername/.buildozer/android/platform/android-sdk
-android.ndk_path = /usr/lib/android-sdk/ndk/21.4.7075529
-
 # (list) Supported architectures
 # include both 32-bit and 64-bit if you want wider support
 android.archs = armeabi-v7a, arm64-v8a
