@@ -8,20 +8,109 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Use pre-configured Buildozer action
-        uses: ArtemSBulgakov/buildozer-action@v1.3.0
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          buildozer_version: stable
-          target: android debug
-          buildozer_init: true
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libstdc++6 \
+            git \
+            zip \
+            unzip \
+            openjdk-17-jdk \
+            autoconf \
+            libtool \
+            pkg-config \
+            zlib1g-dev \
+            libncurses5-dev \
+            cmake \
+            libffi-dev \
+            libssl-dev \
+            python3-pip \
+            curl \
+            wget
+
+      - name: Install Buildozer and dependencies
+        run: |
+          pip install --upgrade pip
+          pip install Cython==0.29.36 buildozer
+
+      - name: Initialize Buildozer if needed
+        run: |
+          if [ ! -f "buildozer.spec" ]; then
+            buildozer init
+          fi
+
+      - name: Set up Android SDK manually
+        run: |
+          # Create Android SDK directory
+          mkdir -p ~/.buildozer/android/platform/android-sdk
+          
+          # Download Android Command Line Tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdline-tools.zip
+          unzip -q cmdline-tools.zip -d ~/.buildozer/android/platform/android-sdk/
+          mv ~/.buildozer/android/platform/android-sdk/cmdline-tools ~/.buildozer/android/platform/android-sdk/cmdline-tools
+          
+          # Set environment variables
+          echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
+          echo "PATH=$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Install Android SDK components
+        run: |
+          # Accept licenses first
+          yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses
+          
+          # Install required components
+          sdkmanager --sdk_root=$ANDROID_SDK_ROOT \
+            "build-tools;34.0.0" \
+            "platform-tools" \
+            "platforms;android-34" \
+            "cmdline-tools;latest" \
+            "ndk;23.2.8568313"
+
+      - name: Verify aidl is available
+        run: |
+          # Check if aidl exists
+          find $ANDROID_SDK_ROOT -name "aidl" -type f | head -5
+          ls -la $ANDROID_SDK_ROOT/build-tools/34.0.0/ | grep aidl || true
+
+      - name: Update Buildozer spec with correct paths
+        run: |
+          if [ -f "buildozer.spec" ]; then
+            # Update Android settings
+            sed -i 's/android.api = .*/android.api = 34/' buildozer.spec
+            sed -i 's/android.minapi = .*/android.minapi = 24/' buildozer.spec
+            sed -i 's/android.ndk = .*/android.ndk = 23.2.8568313/' buildozer.spec
+            sed -i 's|#android.sdk_path =.*|android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk|' buildozer.spec
+            sed -i 's|#android.ndk_path =.*|android.ndk_path = /home/runner/.buildozer/android/platform/android-sdk/ndk/23.2.8568313|' buildozer.spec
+          fi
+
+      - name: Build APK
+        run: |
+          buildozer -v android debug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: calculator-apk
           path: bin/*.apk
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            .buildozer/
+            buildozer.spec
