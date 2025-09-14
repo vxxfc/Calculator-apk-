@@ -52,42 +52,47 @@ jobs:
             buildozer init
           fi
 
-      - name: Set up Android SDK correctly
+      - name: Set up Android SDK with correct structure
         run: |
-          # Create Android SDK directory structure
-          mkdir -p ~/.buildozer/android/platform/android-sdk/cmdline-tools
+          # Clean up any existing directories
+          rm -rf ~/.buildozer/android/platform/android-sdk
+          
+          # Create directory structure that Buildozer expects
+          mkdir -p ~/.buildozer/android/platform/android-sdk
           
           # Download Android Command Line Tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip -d /tmp/
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O /tmp/cmdline-tools.zip
+          unzip -q /tmp/cmdline-tools.zip -d /tmp/
           
-          # Move to correct location (FIXED PATH)
-          mv /tmp/cmdline-tools ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest
+          # Move to the location Buildozer expects (tools directory)
+          mv /tmp/cmdline-tools ~/.buildozer/android/platform/android-sdk/tools
           
           # Set environment variables
           echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
-          echo "PATH=$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin:$PATH" >> $GITHUB_ENV
+          echo "PATH=$HOME/.buildozer/android/platform/android-sdk/tools/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install Android SDK components
         run: |
           # Accept licenses first
-          yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses
+          yes | $ANDROID_SDK_ROOT/tools/bin/sdkmanager --licenses
           
           # Install required components
-          sdkmanager --sdk_root=$ANDROID_SDK_ROOT \
+          $ANDROID_SDK_ROOT/tools/bin/sdkmanager \
             "build-tools;34.0.0" \
             "platform-tools" \
             "platforms;android-34" \
             "ndk;23.2.8568313"
 
-      - name: Verify Android tools
+      - name: Update Buildozer spec to use correct SDK path
         run: |
-          echo "Android SDK contents:"
-          ls -la $ANDROID_SDK_ROOT/
-          echo "Command line tools:"
-          ls -la $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/
-          echo "AIDL location:"
-          find $ANDROID_SDK_ROOT -name "aidl" -type f 2>/dev/null | head -5 || echo "AIDL not found yet"
+          if [ -f "buildozer.spec" ]; then
+            # Update Android settings
+            sed -i 's/android.api = .*/android.api = 34/' buildozer.spec
+            sed -i 's/android.minapi = .*/android.minapi = 24/' buildozer.spec
+            sed -i 's/android.ndk = .*/android.ndk = 23.2.8568313/' buildozer.spec
+            sed -i 's|#android.sdk_path =.*|android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk|' buildozer.spec
+            sed -i 's|#android.ndk_path =.*|android.ndk_path = /home/runner/.buildozer/android/platform/android-sdk/ndk/23.2.8568313|' buildozer.spec
+          fi
 
       - name: Build APK
         run: |
